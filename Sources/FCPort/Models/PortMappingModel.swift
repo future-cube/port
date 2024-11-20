@@ -3,13 +3,19 @@ import SwiftUI
 
 struct PortMappingModel: Identifiable, Codable, Equatable {
     let id: UUID
+    let hostId: UUID
     let name: String
     let localPort: Int
     let remotePort: Int
     var isEnabled: Bool
     
-    init(id: UUID = UUID(), name: String, localPort: Int, remotePort: Int, isEnabled: Bool = false) {
+    static func == (lhs: PortMappingModel, rhs: PortMappingModel) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    init(id: UUID = UUID(), hostId: UUID, name: String, localPort: Int, remotePort: Int, isEnabled: Bool = false) {
         self.id = id
+        self.hostId = hostId
         self.name = name
         self.localPort = localPort
         self.remotePort = remotePort

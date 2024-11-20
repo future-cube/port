@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 struct Layout: View {
     @StateObject private var configManager = SSHConfigManager()
@@ -8,69 +7,39 @@ struct Layout: View {
     
     var body: some View {
         NavigationView {
-            // Left side - Host List with footer
-            VStack(spacing: 0) {
-                // Host List
-                List(selection: $selectedHost) {
-                    ForEach(configManager.configs) { host in
-                        NavigationLink(
-                            destination: HostDetail(host: host),
-                            tag: host,
-                            selection: $selectedHost
-                        ) {
-                            VStack(alignment: .leading) {
-                                Text(host.name)
-                                    .font(.headline)
-                                Text(host.host)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+            // 左侧 - 主机列表
+            HostList(
+                selectedHost: $selectedHost,
+                isAddingHost: $isAddingHost,
+                onHostSelected: { host in
+                    if !isAddingHost {
+                        selectedHost = host
                     }
                 }
-                .listStyle(.sidebar)
-                .frame(minWidth: 200)
-                
-                Divider()
-                
-                // Footer
-                VStack(spacing: 8) {
-                    Button(action: { isAddingHost = true }) {
-                        Label("添加主机", systemImage: "plus")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderless)
-                    
-                    Button(action: {
-                        NSApplication.shared.terminate(nil)
-                    }) {
-                        Label("退出", systemImage: "power")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderless)
-                }
-                .padding(8)
-            }
+            )
             .frame(minWidth: ViewConstants.minSidebarWidth)
             
-            // Right side - Dynamic Content
-            .toolbar {
-                ToolbarItem {
-                    Button(action: { isAddingHost = true }) {
-                        Image(systemName: "plus")
+            // 右侧 - 动态内容
+            if isAddingHost {
+                HostEdit(
+                    onAdd: { config in
+                        Task {
+                            await configManager.addConfig(config)
+                            selectedHost = config
+                            isAddingHost = false
+                        }
+                    },
+                    onCancel: {
+                        isAddingHost = false
                     }
-                }
-            }
-            .sheet(isPresented: $isAddingHost) {
-                HostEdit(onAdd: { config in
-                    Task {
-                        await configManager.addConfig(config)
+                )
+            } else if let host = selectedHost {
+                HostDetail(
+                    host: host,
+                    onHostUpdated: { updatedHost in
+                        selectedHost = updatedHost
                     }
-                })
-            }
-            
-            if let host = selectedHost {
-                HostDetail(host: host)
+                )
             } else {
                 EmptyState(message: "请选择一个主机")
             }

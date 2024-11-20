@@ -3,6 +3,7 @@ import SwiftUI
 struct AddPortMapping: View {
     let host: SSHConfigModel
     let onAdd: (PortMappingModel) -> Void
+    let onCancel: () -> Void
     
     @Environment(\.dismiss) var dismiss
     @State private var name = ""
@@ -16,13 +17,13 @@ struct AddPortMapping: View {
                     TextField("名称", text: $name)
                     TextField("本地端口", text: $localPort)
                         .onChange(of: localPort) { newValue in
-                            let filtered = newValue.filter { $0.isNumber }.prefix(5)
-                            localPort = String(filtered)
+                            let filtered = newValue.filter { $0.isNumber }
+                            localPort = filtered
                         }
                     TextField("远程端口", text: $remotePort)
                         .onChange(of: remotePort) { newValue in
-                            let filtered = newValue.filter { $0.isNumber }.prefix(5)
-                            remotePort = String(filtered)
+                            let filtered = newValue.filter { $0.isNumber }
+                            remotePort = filtered
                         }
                 }
             }
@@ -30,16 +31,22 @@ struct AddPortMapping: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") {
+                        onCancel()
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("添加") {
+                        guard let localPortInt = Int(localPort),
+                              let remotePortInt = Int(remotePort) else { return }
+                        
                         let mapping = PortMappingModel(
+                            id: UUID(),
+                            hostId: host.id,
                             name: name,
-                            localPort: Int(localPort) ?? 0,
-                            remotePort: Int(remotePort) ?? 0,
+                            localPort: localPortInt,
+                            remotePort: remotePortInt,
                             isEnabled: false
                         )
                         onAdd(mapping)

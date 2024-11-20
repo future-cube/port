@@ -15,6 +15,11 @@ struct Item: View {
             }
             
             Spacer()
+            
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .foregroundColor(.accentColor)
+            }
         }
         .padding()
         .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)

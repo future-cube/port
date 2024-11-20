@@ -6,10 +6,9 @@ struct App: SwiftUI.App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
-        WindowGroup {
-            Layout()
+        Settings {
+            EmptyView()
         }
-        .windowStyle(.hiddenTitleBar)
     }
 }
 
@@ -56,8 +55,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
         window.delegate = self
         
-        // 确保窗口初始时是隐藏的
-        window.orderOut(nil)
+        // 显示窗口
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
     
     @objc private func toggleWindow() {
