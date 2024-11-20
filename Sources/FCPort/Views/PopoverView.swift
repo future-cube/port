@@ -46,20 +46,3 @@ struct PopoverView: View {
         .frame(width: 200)
     }
 }
-
-// 用于访问 NSWindow 的辅助视图
-struct WindowAccessor: NSViewRepresentable {
-    let callback: (NSWindow?) -> Void
-    
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            callback(view.window)
-        }
-        return view
-    }
-    
-    func updateNSView(_ nsView: NSView, context: Context) {
-        callback(nsView.window)
-    }
-}

@@ -16,16 +16,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var statusItem: NSStatusItem!
     var popover: NSPopover!
     var settingsWindow: NSWindow?
-    var lastWindowFrame: NSRect?  // 记住窗口最后的位置
+    var lastWindowFrame: NSRect?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 设置为代理应用
         NSApp.setActivationPolicy(.accessory)
         
-        // 如果有默认窗口，关闭它
         NSApp.windows.first?.close()
         
-        // 创建状态栏图标
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
             button.title = "FC"
@@ -33,13 +30,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             button.target = self
         }
         
-        // 创建弹出窗口
         popover = NSPopover()
         popover.contentSize = NSSize(width: 300, height: 300)
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(rootView: PopoverView(openSettings: openSettings))
         
-        // 注册退出菜单
         if let button = statusItem.button {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
@@ -71,9 +66,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     
     @objc func openSettings() {
         if let window = settingsWindow {
-            // 如果窗口存在但被隐藏，则显示它
             if !window.isVisible {
-                // 如果有保存的位置，使用保存的位置
                 if let lastFrame = lastWindowFrame {
                     window.setFrame(lastFrame, display: true)
                 } else {
@@ -85,7 +78,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
         
-        // 创建新窗口
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 800, height: 500),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -105,9 +97,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if let window = notification.object as? NSWindow {
             if window === settingsWindow {
-                // 保存窗口位置
                 lastWindowFrame = window.frame
-                // 隐藏窗口
                 window.orderOut(nil)
             }
         }
@@ -115,9 +105,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         if sender === settingsWindow {
-            // 保存窗口位置
             lastWindowFrame = sender.frame
-            // 隐藏窗口而不是关闭
             sender.orderOut(nil)
             return false
         }

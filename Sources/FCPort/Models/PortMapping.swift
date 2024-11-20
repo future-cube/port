@@ -10,21 +10,19 @@ struct PortMapping: Identifiable, Codable {
     var isEnabled: Bool
     
     var portRanges: [ClosedRange<Int>] {
-        let components = ports.components(separatedBy: ",")
-        return components.compactMap { component -> ClosedRange<Int>? in
-            let trimmed = component.trimmingCharacters(in: .whitespaces)
-            if trimmed.contains("-") {
-                let parts = trimmed.split(separator: "-")
-                if parts.count == 2,
-                   let start = Int(parts[0]),
-                   let end = Int(parts[1]) {
+        ports.components(separatedBy: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .compactMap { component -> ClosedRange<Int>? in
+                if component.contains("-") {
+                    let parts = component.split(separator: "-")
+                    guard parts.count == 2,
+                          let start = Int(parts[0]),
+                          let end = Int(parts[1]) else { return nil }
                     return start...end
                 }
-            } else if let port = Int(trimmed) {
+                guard let port = Int(component) else { return nil }
                 return port...port
             }
-            return nil
-        }
     }
 }
 

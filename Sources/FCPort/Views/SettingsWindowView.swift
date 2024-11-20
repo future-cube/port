@@ -14,70 +14,60 @@ struct SettingsWindowView: View {
     var body: some View {
         HSplitView {
             // 左侧面板
-            VStack(spacing: 0) {
-                HostListView(selectedConfig: $selectedConfig)
-                    .environmentObject(configManager)
-            }
-            .frame(minWidth: 200, maxWidth: .infinity)
+            HostListView(selectedConfig: $selectedConfig)
+                .environmentObject(configManager)
             
             // 右侧面板
             VStack(spacing: 0) {
                 // 工具栏
-                HStack {
-                    if let selectedConfig = selectedConfig {
-                        Button {
-                            rightPanelContent = .editHost(selectedConfig)
-                        } label: {
-                            Label("Edit", systemImage: "pencil.circle.fill")
-                                .help("Edit Host")
-                        }
-                        .buttonStyle(.borderless)
-                        .foregroundColor(.accentColor)
+                if let config = selectedConfig {
+                    HStack(spacing: ViewConstants.standardPadding) {
+                        Spacer()
                         
-                        Button(role: .destructive) {
-                            configManager.deleteConfig(selectedConfig)
-                            self.selectedConfig = nil
-                            rightPanelContent = .empty
-                        } label: {
-                            Label("Delete", systemImage: "trash.circle.fill")
-                                .help("Delete Host")
+                        // 主机信息
+                        VStack(spacing: ViewConstants.tinyPadding) {
+                            HStack(spacing: ViewConstants.standardPadding) {
+                                InfoColumn(title: "Username", value: config.username)
+                                InfoColumn(title: "Hostname", value: config.host)
+                                InfoColumn(title: "Port", value: String(config.port))
+                            }
                         }
-                        .buttonStyle(.borderless)
-                        .foregroundColor(.red)
+                        .padding(.trailing, ViewConstants.standardPadding)
+                        
+                        // 操作按钮
+                        HStack(spacing: ViewConstants.smallPadding) {
+                            ModernToolbarButton(
+                                systemImage: "pencil.circle.fill",
+                                title: "Edit",
+                                action: { rightPanelContent = .editHost(config) }
+                            )
+                            
+                            ModernToolbarButton(
+                                systemImage: "trash.circle.fill",
+                                title: "Delete",
+                                isDestructive: true,
+                                action: {
+                                    configManager.deleteConfig(config)
+                                    self.selectedConfig = nil
+                                    rightPanelContent = .empty
+                                }
+                            )
+                        }
                     }
+                    .frame(height: ViewConstants.toolbarHeight)
+                    .background(ViewConstants.backgroundColor)
                     
-                    Spacer()
-                    
-                    Button {
-                        rightPanelContent = .addHost
-                    } label: {
-                        Label("Add Host", systemImage: "plus.circle.fill")
-                            .help("Add New Host")
-                    }
-                    .buttonStyle(.borderless)
-                    .foregroundColor(.accentColor)
+                    Divider()
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color(NSColor.controlBackgroundColor))
-                
-                Divider()
                 
                 // 内容区域
                 Group {
                     switch rightPanelContent {
                     case .empty:
-                        if let config = selectedConfig {
-                            HostDetailView(config: config)
+                        if selectedConfig != nil {
+                            EmptyPortMappingView()
                         } else {
-                            VStack(spacing: 16) {
-                                Image(systemName: "server.rack")
-                                    .font(.system(size: 48))
-                                    .foregroundColor(.secondary)
-                                Text("Select a host or add a new one")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                            }
+                            EmptySelectionView()
                         }
                     case .addHost:
                         AddHostView(configManager: configManager) {
@@ -91,7 +81,52 @@ struct SettingsWindowView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(minWidth: 400, maxWidth: .infinity)
+            .frame(minWidth: ViewConstants.detailPanelMinWidth)
+        }
+        .frame(minWidth: ViewConstants.minWindowWidth, minHeight: ViewConstants.minWindowHeight)
+    }
+}
+
+struct InfoColumn: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: ViewConstants.tinyPadding) {
+            Text(title)
+                .font(.system(size: ViewConstants.labelFontSize))
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.system(size: ViewConstants.contentFontSize, weight: .medium))
+        }
+    }
+}
+
+struct EmptySelectionView: View {
+    var body: some View {
+        VStack(spacing: ViewConstants.standardPadding) {
+            Image(systemName: "server.rack")
+                .font(.system(size: ViewConstants.largeIconSize))
+                .foregroundColor(.secondary)
+            Text("Select a host or add a new one")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+struct EmptyPortMappingView: View {
+    var body: some View {
+        VStack(spacing: ViewConstants.standardPadding) {
+            Image(systemName: "arrow.triangle.branch")
+                .font(.system(size: ViewConstants.largeIconSize))
+                .foregroundColor(.secondary)
+            Text("No Port Mapping Rules")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            Text("Add a new rule to start mapping ports")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
         }
     }
 }
@@ -245,20 +280,6 @@ struct EditHostView: View {
         !name.isEmpty && !host.isEmpty && !username.isEmpty &&
         (Int(port) ?? 0) > 0 &&
         (authType == .password ? !password.isEmpty : !privateKeyPath.isEmpty)
-    }
-}
-
-struct HostListView: View {
-    @Binding var selectedConfig: SSHConfig?
-    @EnvironmentObject var configManager: SSHConfigManager
-    
-    var body: some View {
-        List(selection: $selectedConfig) {
-            ForEach(configManager.configs) { config in
-                Text("\(config.username)@\(config.host):\(config.port)")
-                    .tag(config)
-            }
-        }
     }
 }
 
