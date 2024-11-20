@@ -1,37 +1,28 @@
 import Foundation
 import SwiftUI
 
-struct PortMapping: Identifiable, Codable {
-    var id = UUID()
-    var name: String
-    var host: String
-    var username: String
-    var ports: String
+struct PortMappingModel: Identifiable, Codable, Equatable {
+    let id: UUID
+    let name: String
+    let localPort: Int
+    let remotePort: Int
     var isEnabled: Bool
     
-    var portRanges: [ClosedRange<Int>] {
-        ports.components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .compactMap { component -> ClosedRange<Int>? in
-                if component.contains("-") {
-                    let parts = component.split(separator: "-")
-                    guard parts.count == 2,
-                          let start = Int(parts[0]),
-                          let end = Int(parts[1]) else { return nil }
-                    return start...end
-                }
-                guard let port = Int(component) else { return nil }
-                return port...port
-            }
+    init(id: UUID = UUID(), name: String, localPort: Int, remotePort: Int, isEnabled: Bool = false) {
+        self.id = id
+        self.name = name
+        self.localPort = localPort
+        self.remotePort = remotePort
+        self.isEnabled = isEnabled
     }
 }
 
 @MainActor
 class PortMappingManager: ObservableObject {
-    @Published var mappings: [PortMapping] = []
+    @Published var mappings: [PortMappingModel] = []
     @Published var selectedMappingId: UUID?
     
-    var selectedMapping: PortMapping? {
+    var selectedMapping: PortMappingModel? {
         guard let selectedId = selectedMappingId else { return nil }
         return mappings.first { $0.id == selectedId }
     }
@@ -55,7 +46,7 @@ class PortMappingManager: ObservableObject {
     func loadMappings() {
         guard let url = saveURL,
               let data = try? Data(contentsOf: url),
-              let loadedMappings = try? JSONDecoder().decode([PortMapping].self, from: data) else {
+              let loadedMappings = try? JSONDecoder().decode([PortMappingModel].self, from: data) else {
             return
         }
         mappings = loadedMappings
@@ -69,7 +60,7 @@ class PortMappingManager: ObservableObject {
         try? data.write(to: url)
     }
     
-    func addMapping(_ mapping: PortMapping) {
+    func addMapping(_ mapping: PortMappingModel) {
         mappings.append(mapping)
         saveMappings()
     }
@@ -80,7 +71,7 @@ class PortMappingManager: ObservableObject {
         saveMappings()
     }
     
-    func toggleMapping(_ mapping: PortMapping) {
+    func toggleMapping(_ mapping: PortMappingModel) {
         if let index = mappings.firstIndex(where: { $0.id == mapping.id }) {
             var updatedMapping = mapping
             updatedMapping.isEnabled.toggle()
@@ -95,28 +86,24 @@ class PortMappingManager: ObservableObject {
         }
     }
     
-    private func startMapping(_ mapping: PortMapping) {
+    private func startMapping(_ mapping: PortMappingModel) {
         Task {
-            for range in mapping.portRanges {
-                for port in range {
-                    let process = Process()
-                    process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-                    process.arguments = [
-                        "-N",
-                        "-L", "\(port):\(mapping.host):\(port)",
-                        "\(mapping.username)@\(mapping.host)"
-                    ]
-                    try? process.run()
-                }
-            }
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
+            process.arguments = [
+                "-N",
+                "-L", "\(mapping.localPort):localhost:\(mapping.remotePort)",
+                "localhost"
+            ]
+            try? process.run()
         }
     }
     
-    private func stopMapping(_ mapping: PortMapping) {
+    private func stopMapping(_ mapping: PortMappingModel) {
         Task {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-            process.arguments = ["-f", "ssh.*\(mapping.host)"]
+            process.arguments = ["-f", "ssh.*localhost"]
             try? process.run()
             process.waitUntilExit()
         }
