@@ -9,6 +9,7 @@ struct AddPortMapping: View {
     @State private var localPort = ""
     @State private var remotePort = ""
     @State private var isHoveringHelp = false
+    @State private var errorMessage: String?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -30,9 +31,12 @@ struct AddPortMapping: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("端口映射格式说明:")
                                 .font(.headline)
-                            Text("• 单端口映射: 80对80")
-                            Text("• 多端口映射: 80,82对82,85,88")
-                            Text("• 端口范围映射: 80-90对110-120")
+                            Text("• 单端口映射: 80")
+                            Text("• 多端口映射: 80,82,85")
+                            Text("• 端口范围映射: 80-90")
+                            Text("• IPv6 端口映射: [::1]:80")
+                            Text("\n所有端口必须在1-65535之间")
+                                .foregroundColor(.secondary)
                         }
                         .padding()
                         .frame(width: 280)
@@ -58,24 +62,22 @@ struct AddPortMapping: View {
                 HStack {
                     Text("本地端口")
                         .frame(width: 100, alignment: .leading)
-                    TextField("如: 80", text: $localPort)
+                    TextField("如: 80,81,82 或 80-90 或 [::1]:80", text: $localPort)
                         .textFieldStyle(.roundedBorder)
-                        .onChange(of: localPort) { newValue in
-                            let filtered = newValue.filter { $0.isNumber }
-                            localPort = filtered
-                        }
                 }
                 
                 // 远程端口
                 HStack {
                     Text("远程端口")
                         .frame(width: 100, alignment: .leading)
-                    TextField("如: 80", text: $remotePort)
+                    TextField("如: 80,81,82 或 80-90 或 [::1]:80", text: $remotePort)
                         .textFieldStyle(.roundedBorder)
-                        .onChange(of: remotePort) { newValue in
-                            let filtered = newValue.filter { $0.isNumber }
-                            remotePort = filtered
-                        }
+                }
+                
+                if let error = errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.caption)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -94,33 +96,30 @@ struct AddPortMapping: View {
                 Spacer()
                 
                 Button("保存") {
-                    guard let localPortInt = Int(localPort),
-                          let remotePortInt = Int(remotePort) else { return }
-                    
-                    let mapping = PortMapping(
-                        name: name,
-                        localPort: localPortInt,
-                        remotePort: remotePortInt,
-                        isEnabled: true
-                    )
-                    onAdd(mapping)
-                    dismiss()
+                    do {
+                        // 验证端口格式
+                        try PortValidator.validate(localPort)
+                        try PortValidator.validate(remotePort)
+                        
+                        // 创建新规则
+                        let mapping = PortMapping(
+                            name: name.isEmpty ? "新规则" : name,
+                            localPort: localPort,
+                            remotePort: remotePort
+                        )
+                        
+                        onAdd(mapping)
+                        dismiss()
+                    } catch let error as PortValidationError {
+                        errorMessage = error.localizedDescription
+                    } catch {
+                        errorMessage = "发生未知错误"
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(name.isEmpty || localPort.isEmpty || remotePort.isEmpty)
-                .keyboardShortcut(.return)
+                .keyboardShortcut(.defaultAction)
             }
             .padding()
-            .background(Color(.windowBackgroundColor))
-            
-            // 提示信息
-            Text("端口范围：1-65535")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding()
         }
-        .background(Color(.windowBackgroundColor))
-        .cornerRadius(8)
         .frame(width: 400)
     }
 }

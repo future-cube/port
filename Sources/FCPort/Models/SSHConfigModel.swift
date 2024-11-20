@@ -3,11 +3,35 @@ import Foundation
 struct PortMapping: Codable, Identifiable, Hashable {
     let id: UUID
     var name: String
-    var localPort: Int
-    var remotePort: Int
+    var localPort: String
+    var remotePort: String
     var isEnabled: Bool
     
-    init(id: UUID = UUID(), name: String, localPort: Int, remotePort: Int, isEnabled: Bool = true) {
+    enum CodingKeys: String, CodingKey {
+        case id, name, localPort, remotePort, isEnabled
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
+        
+        // 处理端口的兼容性
+        if let localPortInt = try? container.decode(Int.self, forKey: .localPort) {
+            localPort = String(localPortInt)
+        } else {
+            localPort = try container.decode(String.self, forKey: .localPort)
+        }
+        
+        if let remotePortInt = try? container.decode(Int.self, forKey: .remotePort) {
+            remotePort = String(remotePortInt)
+        } else {
+            remotePort = try container.decode(String.self, forKey: .remotePort)
+        }
+    }
+    
+    init(id: UUID = UUID(), name: String, localPort: String, remotePort: String, isEnabled: Bool = true) {
         self.id = id
         self.name = name
         self.localPort = localPort
