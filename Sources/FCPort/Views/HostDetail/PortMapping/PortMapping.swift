@@ -2,8 +2,8 @@ import SwiftUI
 import Combine
 
 struct PortMappingView: View {
+    @EnvironmentObject private var configManager: SSHConfigManager
     let host: SSHConfigModel
-    @EnvironmentObject var configManager: SSHConfigManager
     @State private var showAddForm = false
     
     var body: some View {
@@ -17,8 +17,11 @@ struct PortMappingView: View {
                     Spacer()
                     
                     Button(action: {
+                        var updatedHost = host
+                        updatedHost = updatedHost.clearRules()
                         Task {
-                            EventService.shared.publishRuleEvent(.cleared(host.id))
+                            await configManager.updateConfig(updatedHost)
+                            EventService.shared.publishHostEvent(.updated(updatedHost))
                         }
                     }) {
                         HStack {
@@ -41,8 +44,11 @@ struct PortMappingView: View {
                 
                 if showAddForm {
                     AddPortMapping(host: host, onAdd: { rule in
+                        var updatedHost = host
+                        updatedHost = updatedHost.addRule(rule)
                         Task {
-                            EventService.shared.publishRuleEvent(.created(rule, host.id))
+                            await configManager.updateConfig(updatedHost)
+                            EventService.shared.publishHostEvent(.updated(updatedHost))
                             showAddForm = false
                         }
                     })
@@ -55,7 +61,7 @@ struct PortMappingView: View {
             
             // 规则列表
             VStack(spacing: 8) {
-                ForEach(host.rules, id: \.id) { rule in
+                ForEach(host.rules) { rule in
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("本地端口 \(rule.localPort) → 远程端口 \(rule.remotePort)")
@@ -70,18 +76,24 @@ struct PortMappingView: View {
                         Toggle("启用", isOn: Binding(
                             get: { rule.isEnabled },
                             set: { newValue in
+                                var updatedRule = rule
+                                updatedRule.isEnabled = newValue
+                                var updatedHost = host
+                                updatedHost = updatedHost.updateRule(updatedRule)
                                 Task {
-                                    var updatedRule = rule
-                                    updatedRule.isEnabled = newValue
-                                    EventService.shared.publishRuleEvent(.updated(updatedRule, host.id))
+                                    await configManager.updateConfig(updatedHost)
+                                    EventService.shared.publishHostEvent(.updated(updatedHost))
                                 }
                             }
                         ))
                         .labelsHidden()
                         
                         Button(action: {
+                            var updatedHost = host
+                            updatedHost = updatedHost.deleteRule(rule.id)
                             Task {
-                                EventService.shared.publishRuleEvent(.deleted(rule.id, host.id))
+                                await configManager.updateConfig(updatedHost)
+                                EventService.shared.publishHostEvent(.updated(updatedHost))
                             }
                         }) {
                             Image(systemName: "xmark.circle.fill")
@@ -103,9 +115,6 @@ struct PortMappingView: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-        }
-        .onAppear {
-            // rules = host.rules
         }
     }
 }

@@ -31,7 +31,7 @@ struct SSHConfigModel: Identifiable, Codable, Equatable, Hashable {
     var password: String?
     var privateKey: String?
     var privateKeyPath: String?
-    var rules: [PortMapping]
+    private(set) var rules: [PortMapping]
     
     init(
         id: UUID = UUID(),
@@ -63,39 +63,43 @@ struct SSHConfigModel: Identifiable, Codable, Equatable, Hashable {
     }
     
     static func == (lhs: SSHConfigModel, rhs: SSHConfigModel) -> Bool {
-        lhs.id == rhs.id
+        lhs.id == rhs.id && lhs.rules == rhs.rules
     }
     
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(rules)
     }
     
-    // 添加规则
-    mutating func addRule(_ rule: PortMapping) {
+    // MARK: - Rule Management
+    
+    mutating func addRule(_ rule: PortMapping) -> Self {
         rules.append(rule)
+        return self
     }
     
-    // 删除规则
-    mutating func deleteRule(_ ruleId: UUID) {
+    mutating func deleteRule(_ ruleId: UUID) -> Self {
         rules.removeAll { $0.id == ruleId }
+        return self
     }
     
-    // 清空规则
-    mutating func clearRules() {
-        rules.removeAll()
-    }
-    
-    // 更新规则
-    mutating func updateRule(_ rule: PortMapping) {
+    mutating func updateRule(_ rule: PortMapping) -> Self {
         if let index = rules.firstIndex(where: { $0.id == rule.id }) {
             rules[index] = rule
         }
+        return self
+    }
+    
+    mutating func clearRules() -> Self {
+        rules.removeAll()
+        return self
     }
 }
 
 @MainActor
 class SSHConfigManager: ObservableObject {
-    @Published var configs: [SSHConfigModel] = []
+    static let shared = SSHConfigManager()
+    @Published private(set) var configs: [SSHConfigModel] = []
     private let configFile = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/FCPort/ssh_configs.json")
     
