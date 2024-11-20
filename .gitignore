@@ -55,3 +55,4 @@ playground.xcworkspace
 # Build products
 build/
 DerivedData/
+dist/
