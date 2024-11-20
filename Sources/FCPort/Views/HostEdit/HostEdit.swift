@@ -8,7 +8,7 @@ struct HostEdit: View {
     @State private var name: String
     @State private var hostname: String
     @State private var port: String
-    @State private var username: String
+    @State private var user: String
     @State private var authType: SSHAuthType
     @State private var password: String
     @State private var privateKeyPath: String
@@ -24,7 +24,7 @@ struct HostEdit: View {
         _name = State(initialValue: host?.name ?? "")
         _hostname = State(initialValue: host?.host ?? "")
         _port = State(initialValue: String(host?.port ?? 22))
-        _username = State(initialValue: host?.username ?? "")
+        _user = State(initialValue: host?.user ?? "")
         _authType = State(initialValue: host?.authType ?? .password)
         _password = State(initialValue: host?.password ?? "")
         _privateKeyPath = State(initialValue: host?.privateKeyPath ?? "")
@@ -64,6 +64,13 @@ struct HostEdit: View {
                                     port = String(filtered)
                                 }
                         }
+                        
+                        HStack {
+                            Text("用户名")
+                                .frame(width: 80, alignment: .leading)
+                            TextField("请输入用户名", text: $user)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
                     }
                     .padding()
                 }
@@ -71,13 +78,6 @@ struct HostEdit: View {
                 // 认证信息
                 GroupBox("认证信息") {
                     VStack(spacing: 12) {
-                        HStack {
-                            Text("用户名")
-                                .frame(width: 80, alignment: .leading)
-                            TextField("请输入用户名", text: $username)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                        }
-                        
                         HStack {
                             Text("认证方式")
                                 .frame(width: 80, alignment: .leading)
@@ -125,10 +125,12 @@ struct HostEdit: View {
                         name: name,
                         host: hostname,
                         port: Int(port) ?? 22,
-                        username: username,
+                        user: user,
                         authType: authType,
                         password: authType == .password ? password : nil,
-                        privateKeyPath: authType == .privateKey ? privateKeyPath : nil
+                        privateKey: nil,
+                        privateKeyPath: authType == .privateKey ? privateKeyPath : nil,
+                        rules: host?.rules ?? []
                     )
                     onAdd(config)
                 }
@@ -146,7 +148,7 @@ struct HostEdit: View {
     private var isValid: Bool {
         !name.isEmpty &&
         !hostname.isEmpty &&
-        !username.isEmpty &&
+        !user.isEmpty &&
         (authType == .password ? !password.isEmpty : !privateKeyPath.isEmpty)
     }
 }

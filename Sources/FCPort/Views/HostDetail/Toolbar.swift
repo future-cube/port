@@ -7,26 +7,41 @@ struct Toolbar: View {
     
     var body: some View {
         HStack {
-            VStack(alignment: .leading) {
+            // 主机信息
+            VStack(alignment: .leading, spacing: 4) {
                 Text(host.name)
-                    .font(.headline)
-                Text("\(host.username)@\(host.host)")
-                    .font(.subheadline)
+                    .font(.title2)
+                    .fontWeight(.medium)
+                
+                Text("\(host.user)@\(host.host):\(host.port)")
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            Button(action: onEdit) {
-                Image(systemName: "pencil")
+            // 操作按钮
+            HStack(spacing: 12) {
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.borderless)
+                .help("编辑主机")
+                
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.borderless)
+                .help("删除主机")
             }
-            .buttonStyle(.borderless)
-            
-            Button(role: .destructive, action: onDelete) {
-                Image(systemName: "trash")
-            }
-            .buttonStyle(.borderless)
         }
-        .padding()
+        .padding(.horizontal)
+        .frame(height: 64)
     }
 }

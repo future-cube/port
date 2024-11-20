@@ -1,135 +1,111 @@
 import SwiftUI
 import Combine
 
-struct PortMapping: View {
+struct PortMappingView: View {
     let host: SSHConfigModel
-    @State private var ruleName = ""
-    @State private var localPort = ""
-    @State private var remotePort = ""
-    @State private var isEnabled = true
-    @State private var mappings: [PortMappingModel] = []
-    @State private var cancellables = Set<AnyCancellable>()
-    
-    private func resetForm() {
-        ruleName = ""
-        localPort = ""
-        remotePort = ""
-        isEnabled = true
-    }
+    @EnvironmentObject var configManager: SSHConfigManager
+    @State private var showAddForm = false
     
     var body: some View {
         VStack(spacing: 16) {
-            // 操作区域
-            GroupBox {
-                VStack(spacing: 16) {
-                    // 端口映射列表标题
-                    HStack {
-                        Text("端口映射")
-                            .font(.headline)
-                        Spacer()
-                    }
+            // 标题区域
+            VStack(spacing: 16) {
+                HStack {
+                    Text("端口映射")
+                        .font(.headline)
                     
-                    // 添加端口映射表单
-                    HStack(spacing: 16) {
-                        TextField("规则名称", text: $ruleName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 120)
-                        
-                        TextField("本地端口", text: $localPort)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 80)
-                            .onChange(of: localPort) { newValue in
-                                let filtered = newValue.filter { $0.isNumber }
-                                localPort = filtered
-                            }
-                        
-                        TextField("远程端口", text: $remotePort)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 80)
-                            .onChange(of: remotePort) { newValue in
-                                let filtered = newValue.filter { $0.isNumber }
-                                remotePort = filtered
-                            }
-                        
-                        Toggle("启用", isOn: $isEnabled)
-                            .toggleStyle(.switch)
-                        
-                        Button("添加") {
-                            guard let localPortInt = Int(localPort),
-                                  let remotePortInt = Int(remotePort) else { return }
-                            
-                            let mapping = PortMappingModel(
-                                id: UUID(),
-                                hostId: host.id,
-                                name: ruleName,
-                                localPort: localPortInt,
-                                remotePort: remotePortInt,
-                                isEnabled: isEnabled
-                            )
-                            
-                            mappings.append(mapping)
-                            EventService.shared.publish(.portMappingAdded(mapping))
-                            resetForm()
+                    Spacer()
+                    
+                    Button(action: {
+                        Task {
+                            EventService.shared.publishRuleEvent(.cleared(host.id))
                         }
-                        .disabled(ruleName.isEmpty || localPort.isEmpty || remotePort.isEmpty)
+                    }) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("清空规则")
+                        }
                     }
+                    .buttonStyle(.borderless)
+                    .foregroundColor(.red)
+                    
+                    Button(action: { showAddForm.toggle() }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                            Text("添加规则")
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundColor(.accentColor)
                 }
-                .padding()
+                
+                if showAddForm {
+                    AddPortMapping(host: host, onAdd: { rule in
+                        Task {
+                            EventService.shared.publishRuleEvent(.created(rule, host.id))
+                            showAddForm = false
+                        }
+                    })
+                }
             }
+            .padding()
+            .background(Color(.textBackgroundColor))
+            .cornerRadius(8)
+            .frame(maxWidth: .infinity)
             
-            // 端口映射列表
-            List {
-                ForEach(mappings) { mapping in
+            // 规则列表
+            VStack(spacing: 8) {
+                ForEach(host.rules, id: \.id) { rule in
                     HStack {
-                        Text(mapping.name)
-                            .frame(width: 120, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("本地端口 \(rule.localPort) → 远程端口 \(rule.remotePort)")
+                                .font(.body)
+                            Text(rule.name)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                         
-                        Text("\(mapping.localPort)")
-                            .frame(width: 80)
+                        Spacer()
                         
-                        Text("\(mapping.remotePort)")
-                            .frame(width: 80)
-                        
-                        Toggle("", isOn: Binding(
-                            get: { mapping.isEnabled },
+                        Toggle("启用", isOn: Binding(
+                            get: { rule.isEnabled },
                             set: { newValue in
-                                if let index = mappings.firstIndex(where: { $0.id == mapping.id }) {
-                                    var updatedMapping = mapping
-                                    updatedMapping.isEnabled = newValue
-                                    mappings[index] = updatedMapping
-                                    EventService.shared.publish(.portMappingUpdated(updatedMapping))
+                                Task {
+                                    var updatedRule = rule
+                                    updatedRule.isEnabled = newValue
+                                    EventService.shared.publishRuleEvent(.updated(updatedRule, host.id))
                                 }
                             }
                         ))
-                        .toggleStyle(.switch)
-                        
-                        Spacer()
+                        .labelsHidden()
                         
                         Button(action: {
-                            mappings.removeAll { $0.id == mapping.id }
-                            EventService.shared.publish(.portMappingDeleted(mapping))
+                            Task {
+                                EventService.shared.publishRuleEvent(.deleted(rule.id, host.id))
+                            }
                         }) {
-                            Image(systemName: "trash")
+                            Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.red)
+                                .frame(width: 28, height: 28)
                         }
                         .buttonStyle(.plain)
+                        .help("删除规则")
                     }
-                    .padding(.vertical, 4)
+                    .padding()
+                    .background(Color(.textBackgroundColor))
+                    .cornerRadius(8)
+                    .frame(maxWidth: .infinity)
+                }
+                
+                if host.rules.isEmpty {
+                    Text("暂无规则")
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
                 }
             }
-            .listStyle(.plain)
         }
-        .padding()
-        .task {
-            // 订阅主机选择事件，重置表单
-            EventService.shared.eventPublisher
-                .receive(on: DispatchQueue.main)
-                .sink { event in
-                    if case .hostSelected = event {
-                        resetForm()
-                    }
-                }
-                .store(in: &cancellables)
+        .onAppear {
+            // rules = host.rules
         }
     }
 }
