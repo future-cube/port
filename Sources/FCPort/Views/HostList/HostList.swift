@@ -3,7 +3,6 @@ import SwiftUI
 struct HostList: View {
     @Binding var selectedHost: SSHConfigModel?
     @Binding var isAddingHost: Bool
-    let onHostSelected: (SSHConfigModel) -> Void
     @EnvironmentObject var configManager: SSHConfigManager
     
     var body: some View {
@@ -31,7 +30,7 @@ struct HostList: View {
                         )
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            onHostSelected(host)
+                            EventService.shared.publish(.hostSelected(host))
                         }
                     }
                 }

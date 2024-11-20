@@ -1,9 +1,10 @@
 import SwiftUI
+import Combine
 
 struct HostDetail: View {
     let host: SSHConfigModel
-    let onHostUpdated: (SSHConfigModel) -> Void
     @State private var isEditing = false
+    @State private var cancellables = Set<AnyCancellable>()
     @EnvironmentObject var configManager: SSHConfigManager
     
     var body: some View {
@@ -15,6 +16,7 @@ struct HostDetail: View {
                 onDelete: {
                     Task {
                         await configManager.deleteConfig(host)
+                        EventService.shared.publish(.hostDeleted(host))
                     }
                 }
             )
@@ -27,7 +29,7 @@ struct HostDetail: View {
                     onAdd: { config in
                         Task {
                             await configManager.updateConfig(config)
-                            onHostUpdated(config)
+                            EventService.shared.publish(.hostUpdated(config))
                             isEditing = false
                         }
                     },
@@ -39,6 +41,17 @@ struct HostDetail: View {
                 // 端口映射管理
                 PortMapping(host: host)
             }
+        }
+        .task {
+            // 订阅主机选择事件，取消编辑状态
+            EventService.shared.eventPublisher
+                .receive(on: DispatchQueue.main)
+                .sink { event in
+                    if case .hostSelected = event {
+                        isEditing = false
+                    }
+                }
+                .store(in: &cancellables)
         }
     }
 }

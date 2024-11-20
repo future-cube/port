@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct PortMapping: View {
     let host: SSHConfigModel
@@ -7,6 +8,14 @@ struct PortMapping: View {
     @State private var remotePort = ""
     @State private var isEnabled = true
     @State private var mappings: [PortMappingModel] = []
+    @State private var cancellables = Set<AnyCancellable>()
+    
+    private func resetForm() {
+        ruleName = ""
+        localPort = ""
+        remotePort = ""
+        isEnabled = true
+    }
     
     var body: some View {
         VStack(spacing: 16) {
@@ -59,11 +68,8 @@ struct PortMapping: View {
                             )
                             
                             mappings.append(mapping)
-                            // 重置表单
-                            ruleName = ""
-                            localPort = ""
-                            remotePort = ""
-                            isEnabled = true
+                            EventService.shared.publish(.portMappingAdded(mapping))
+                            resetForm()
                         }
                         .disabled(ruleName.isEmpty || localPort.isEmpty || remotePort.isEmpty)
                     }
@@ -73,8 +79,7 @@ struct PortMapping: View {
             
             // 端口映射列表
             List {
-                ForEach(mappings.indices, id: \.self) { index in
-                    let mapping = mappings[index]
+                ForEach(mappings) { mapping in
                     HStack {
                         Text(mapping.name)
                             .frame(width: 120, alignment: .leading)
@@ -88,9 +93,12 @@ struct PortMapping: View {
                         Toggle("", isOn: Binding(
                             get: { mapping.isEnabled },
                             set: { newValue in
-                                var updatedMapping = mapping
-                                updatedMapping.isEnabled = newValue
-                                mappings[index] = updatedMapping
+                                if let index = mappings.firstIndex(where: { $0.id == mapping.id }) {
+                                    var updatedMapping = mapping
+                                    updatedMapping.isEnabled = newValue
+                                    mappings[index] = updatedMapping
+                                    EventService.shared.publish(.portMappingUpdated(updatedMapping))
+                                }
                             }
                         ))
                         .toggleStyle(.switch)
@@ -99,6 +107,7 @@ struct PortMapping: View {
                         
                         Button(action: {
                             mappings.removeAll { $0.id == mapping.id }
+                            EventService.shared.publish(.portMappingDeleted(mapping))
                         }) {
                             Image(systemName: "trash")
                                 .foregroundColor(.red)
@@ -111,5 +120,16 @@ struct PortMapping: View {
             .listStyle(.plain)
         }
         .padding()
+        .task {
+            // 订阅主机选择事件，重置表单
+            EventService.shared.eventPublisher
+                .receive(on: DispatchQueue.main)
+                .sink { event in
+                    if case .hostSelected = event {
+                        resetForm()
+                    }
+                }
+                .store(in: &cancellables)
+        }
     }
 }
