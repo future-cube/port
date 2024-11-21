@@ -49,26 +49,6 @@ struct HostList: View {
                 .padding(.vertical, 12)
             }
             .padding(.vertical, 8)
-            
-            Divider()
-            
-            // 底部退出按钮
-            Button(action: {
-                NSApplication.shared.terminate(nil)
-            }) {
-                HStack {
-                    Image(systemName: "power")
-                        .font(.title3)
-                    Text("退出")
-                        .font(.caption)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-            }
-            .buttonStyle(.borderless)
-            .background(Color(NSColor.windowBackgroundColor))
-            .cornerRadius(8)
-            .padding(12)
         }
     }
 }

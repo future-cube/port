@@ -118,6 +118,64 @@ struct SSHConfigModel: Identifiable, Codable, Equatable, Hashable {
         rules.removeAll()
         return self
     }
+    
+    // MARK: - SSH Command Generation
+    
+    func generateSSHCommand(for rule: PortMapping) -> String {
+        // 根据认证类型添加私钥参数
+        let identityFile = authType == .privateKey && !(privateKeyPath ?? "").isEmpty 
+            ? "-i \"\(privateKeyPath ?? "")\""
+            : ""
+        
+        // 添加自定义标记，用于识别是由本软件启动的SSH进程
+        let customMark = "-o SendEnv=FCPORT"
+        
+        // 检查是否包含端口范围（例如：80-90）
+        if rule.localPort.contains("-") && rule.remotePort.contains("-") {
+            let localPorts = rule.localPort.split(separator: "-").map(String.init)
+            let remotePorts = rule.remotePort.split(separator: "-").map(String.init)
+            
+            // 确保有起始和结束端口
+            guard localPorts.count == 2, remotePorts.count == 2,
+                  let localStart = Int(localPorts[0]), let localEnd = Int(localPorts[1]),
+                  let remoteStart = Int(remotePorts[0]), let remoteEnd = Int(remotePorts[1]) else {
+                return "Invalid port range format"
+            }
+            
+            // 生成多个端口转发参数
+            let portMappings = zip(localStart...localEnd, remoteStart...remoteEnd)
+                .map { "-L \($0):\(host):\($1)" }
+                .joined(separator: " ")
+            
+            return "ssh -N \(identityFile) \(customMark) \(portMappings) \(user)@\(host)".trimmingCharacters(in: .whitespaces)
+        }
+        
+        // 检查是否包含多个端口（例如：80,81,82）
+        if rule.localPort.contains(",") && rule.remotePort.contains(",") {
+            let localPorts = rule.localPort.split(separator: ",").map(String.init)
+            let remotePorts = rule.remotePort.split(separator: ",").map(String.init)
+            
+            // 确保本地端口和远程端口数量匹配
+            guard localPorts.count == remotePorts.count else {
+                return "Mismatched number of ports"
+            }
+            
+            // 生成多个端口转发参数
+            let portMappings = zip(localPorts, remotePorts)
+                .map { "-L \($0):\(host):\($1)" }
+                .joined(separator: " ")
+            
+            return "ssh -N \(identityFile) \(customMark) \(portMappings) \(user)@\(host)".trimmingCharacters(in: .whitespaces)
+        }
+        
+        // 单个端口转发
+        return "ssh -N \(identityFile) \(customMark) -L \(rule.localPort):\(host):\(rule.remotePort) \(user)@\(host)".trimmingCharacters(in: .whitespaces)
+    }
+    
+    func generateSSHArguments(for rule: PortMapping) -> [String] {
+        let command = generateSSHCommand(for: rule)
+        return Array(command.components(separatedBy: " ").dropFirst())  // 去掉 "ssh"
+    }
 }
 
 @MainActor

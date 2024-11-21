@@ -13,10 +13,21 @@ struct App: SwiftUI.App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    private let sshService = SSHService.shared
+    private let configManager = SSHConfigManager.shared
     private var statusItem: NSStatusItem!
     private var window: NSWindow!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 应用启动时，启动所有已启用的转发规则
+        Task {
+            do {
+                try await sshService.startAllServices(configs: configManager.configs)
+            } catch {
+                print("启动服务失败: \(error.localizedDescription)")
+            }
+        }
+        
         NSApp.setActivationPolicy(.accessory)
         
         setupStatusItem()
@@ -31,11 +42,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
     
+    func applicationWillTerminate(_ notification: Notification) {
+        // 应用退出时，终止所有转发
+        Task {
+            do {
+                try await sshService.stopAllCommands()
+            } catch {
+                print("停止服务失败: \(error.localizedDescription)")
+            }
+        }
+    }
+    
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "network", accessibilityDescription: "FC Port")
+            if let image = Bundle.main.image(forResource: "StatusBarIcon") {
+                image.size = NSSize(width: 18, height: 18)  // 调整图标大小为状态栏合适的尺寸
+                image.isTemplate = true  // 使图标适应深色/浅色模式
+                button.image = image
+            } else {
+                // 如果找不到自定义图标，使用系统图标作为后备
+                button.image = NSImage(systemSymbolName: "network", accessibilityDescription: "FC Port")
+            }
             button.action = #selector(toggleWindow)
             button.target = self
         }

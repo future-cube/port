@@ -35,7 +35,7 @@ struct HostDetail: View {
                         if isEditing {
                             HostEdit(
                                 host: host,
-                                onAdd: { config in
+                                onSave: { config in
                                     Task {
                                         await configManager.updateConfig(config)
                                         EventService.shared.publishHostEvent(.updated(config))

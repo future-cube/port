@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="15" />
+            <feOffset dx="0" dy="10" result="offsetblur" />
+            <feComponentTransfer>
+                <feFuncA type="linear" slope="0.3" />
+            </feComponentTransfer>
+            <feMerge>
+                <feMergeNode />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
+        </filter>
+    </defs>
+    
+    <!-- Background -->
+    <rect x="112" y="112" width="800" height="800" rx="180" ry="180" fill="url(#bg)" filter="shadow" />
+    
+    <!-- Connection Lines -->
+    <g stroke="#FFFFFF" stroke-width="40" stroke-linecap="round">
+        <!-- First Connection -->
+        <line x1="312" y1="312" x2="712" y2="312" opacity="0.9" />
+        <!-- Second Connection -->
+        <line x1="312" y1="512" x2="712" y2="512" opacity="0.9" />
+        <!-- Third Connection -->
+        <line x1="312" y1="712" x2="712" y2="712" opacity="0.9" />
+    </g>
+    
+    <!-- Left Points -->
+    <g fill="#FFFFFF">
+        <circle cx="312" cy="312" r="30" />
+        <circle cx="312" cy="512" r="30" />
+        <circle cx="312" cy="712" r="30" />
+    </g>
+    
+    <!-- Right Points -->
+    <g fill="#FFFFFF">
+        <circle cx="712" cy="312" r="30" />
+        <circle cx="712" cy="512" r="30" />
+        <circle cx="712" cy="712" r="30" />
+    </g>
+</svg>

@@ -5,16 +5,28 @@
     <key>CFBundleIdentifier</key>
     <string>com.example.fcport</string>
     <key>CFBundleName</key>
-    <string>FCPort</string>
+    <string>端口映射器</string>
+    <key>CFBundleDisplayName</key>
+    <string>端口映射器</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>CFBundleExecutable</key>
+    <string>FCPort</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>zh_CN</string>
 </dict>
 </plist>

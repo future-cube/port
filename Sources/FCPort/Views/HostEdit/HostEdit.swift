@@ -2,7 +2,7 @@ import SwiftUI
 
 struct HostEdit: View {
     var host: SSHConfigModel?
-    let onAdd: (SSHConfigModel) -> Void
+    let onSave: (SSHConfigModel) -> Void
     let onCancel: () -> Void
     
     @State private var name: String
@@ -12,14 +12,15 @@ struct HostEdit: View {
     @State private var authType: SSHAuthType
     @State private var password: String
     @State private var privateKeyPath: String
+    @State private var showingPrivateKeyPicker = false
     
     init(
         host: SSHConfigModel? = nil,
-        onAdd: @escaping (SSHConfigModel) -> Void,
+        onSave: @escaping (SSHConfigModel) -> Void,
         onCancel: @escaping () -> Void
     ) {
         self.host = host
-        self.onAdd = onAdd
+        self.onSave = onSave
         self.onCancel = onCancel
         _name = State(initialValue: host?.name ?? "")
         _hostname = State(initialValue: host?.host ?? "")
@@ -57,12 +58,8 @@ struct HostEdit: View {
                         HStack {
                             Text("端口")
                                 .frame(width: 80, alignment: .leading)
-                            TextField("22", text: $port)
+                            TextField("请输入端口号", text: $port)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .onChange(of: port) { newValue in
-                                    let filtered = newValue.filter { $0.isNumber }.prefix(5)
-                                    port = String(filtered)
-                                }
                         }
                         
                         HStack {
@@ -78,15 +75,11 @@ struct HostEdit: View {
                 // 认证信息
                 GroupBox("认证信息") {
                     VStack(spacing: 12) {
-                        HStack {
-                            Text("认证方式")
-                                .frame(width: 80, alignment: .leading)
-                            Picker("", selection: $authType) {
-                                Text("密码").tag(SSHAuthType.password)
-                                Text("私钥").tag(SSHAuthType.privateKey)
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
+                        Picker("认证方式", selection: $authType) {
+                            Text("密码").tag(SSHAuthType.password)
+                            Text("密钥").tag(SSHAuthType.privateKey)
                         }
+                        .pickerStyle(SegmentedPickerStyle())
                         
                         if authType == .password {
                             HStack {
@@ -97,12 +90,26 @@ struct HostEdit: View {
                             }
                         } else {
                             HStack {
-                                Text("私钥路径")
+                                Text("密钥路径")
                                     .frame(width: 80, alignment: .leading)
-                                TextField("请选择私钥文件", text: $privateKeyPath)
+                                TextField("请选择密钥文件", text: $privateKeyPath)
                                     .textFieldStyle(RoundedBorderTextFieldStyle())
                                 Button("选择") {
-                                    // TODO: 添加文件选择功能
+                                    showingPrivateKeyPicker = true
+                                }
+                            }
+                            .fileImporter(
+                                isPresented: $showingPrivateKeyPicker,
+                                allowedContentTypes: [.item],
+                                allowsMultipleSelection: false
+                            ) { result in
+                                switch result {
+                                case .success(let files):
+                                    if let selectedFile = files.first {
+                                        privateKeyPath = selectedFile.path
+                                    }
+                                case .failure(let error):
+                                    print("Error selecting file: \(error)")
                                 }
                             }
                         }
@@ -110,45 +117,58 @@ struct HostEdit: View {
                     .padding()
                 }
             }
-            .padding(.horizontal)
             
-            // 按钮
-            HStack(spacing: 20) {
-                Button("取消") {
-                    onCancel()
-                }
-                .buttonStyle(.bordered)
+            // 操作按钮
+            HStack {
+                Button("取消", action: onCancel)
+                    .keyboardShortcut(.escape)
                 
-                Button(host == nil ? "添加" : "保存") {
-                    let config = SSHConfigModel(
+                Spacer()
+                
+                Button("保存") {
+                    let newHost = SSHConfigModel(
                         id: host?.id ?? UUID(),
-                        name: name,
-                        host: hostname,
-                        port: Int(port) ?? 22,
-                        user: user,
+                        name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                        host: hostname.trimmingCharacters(in: .whitespacesAndNewlines),
+                        port: Int(port.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 22,
+                        user: user.trimmingCharacters(in: .whitespacesAndNewlines),
                         authType: authType,
-                        password: authType == .password ? password : nil,
-                        privateKey: nil,
-                        privateKeyPath: authType == .privateKey ? privateKeyPath : nil,
+                        password: password,
+                        privateKeyPath: privateKeyPath.trimmingCharacters(in: .whitespacesAndNewlines),
                         rules: host?.rules ?? []
                     )
-                    onAdd(config)
+                    onSave(newHost)
                 }
-                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.return)
                 .disabled(!isValid)
             }
-            .padding(.bottom)
-            
-            Spacer()
+            .padding(.top)
         }
+        .padding()
         .frame(width: 400)
-        .background(Color(.windowBackgroundColor))
     }
     
     private var isValid: Bool {
-        !name.isEmpty &&
-        !hostname.isEmpty &&
-        !user.isEmpty &&
-        (authType == .password ? !password.isEmpty : !privateKeyPath.isEmpty)
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedHostname = hostname.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedUser = user.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPort = port.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedName.isEmpty,
+              !trimmedHostname.isEmpty,
+              !trimmedUser.isEmpty,
+              !trimmedPort.isEmpty,
+              let portNumber = Int(trimmedPort),
+              portNumber > 0,
+              portNumber <= 65535
+        else {
+            return false
+        }
+        
+        if authType == .privateKey {
+            return !privateKeyPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        
+        return true
     }
 }
