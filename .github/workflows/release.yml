@@ -1,0 +1,51 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Swift
+      uses: swift-actions/setup-swift@v1
+      
+    - name: Build Release
+      run: |
+        swift build -c release
+        
+    - name: Create App Bundle
+      run: |
+        chmod +x ./Scripts/release.sh
+        ./Scripts/release.sh
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+        
+    - name: Zip Application
+      run: |
+        cd .build/release
+        zip -r "端口映射器.app.zip" "端口映射器.app"
+        
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./.build/release/端口映射器.app.zip
+        asset_name: 端口映射器.app.zip
+        asset_content_type: application/zip

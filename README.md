@@ -68,7 +68,7 @@
 
 ## 鸣谢
 
-Windsurf（https://github.com/windsurf/windsurf），代码均由伟大的Windsurf生成，感谢他的贡献！
+Windsurf(https://github.com/windsurf/windsurf) ，代码均由伟大的Windsurf生成，感谢他的贡献！
 
 ## 许可证
 
