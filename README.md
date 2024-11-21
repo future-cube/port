@@ -47,6 +47,13 @@
    - 本地端口和远程端口
 4. 点击开关按钮启动或停止端口映射
 
+## 示例
+![image](https://github.com/user-attachments/assets/21b07fdd-e06a-47a0-b637-a523cbe1bd5e)
+
+![image](https://github.com/user-attachments/assets/dda8d9f8-52f0-495e-8ef2-5330867ae98c)
+
+
+
 ## 开发相关
 
 - 使用 SwiftUI 构建用户界面
